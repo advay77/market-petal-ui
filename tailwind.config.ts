@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -82,6 +83,7 @@ export default {
         "gradient-primary": "var(--gradient-primary)",
         "gradient-secondary": "var(--gradient-secondary)",
         "gradient-success": "var(--gradient-success)",
+        "gradient-warning": "var(--gradient-warning)",
         "gradient-subtle": "var(--gradient-subtle)",
         "gradient-chart": "var(--gradient-chart)",
       },
@@ -155,5 +157,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [animate],
 } satisfies Config;

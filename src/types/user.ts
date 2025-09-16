@@ -8,7 +8,7 @@ export interface User {
   partnerId?: string; // Only for partner-admin users
   avatar?: string;
   preferences: {
-    theme: 'light' | 'dark';
+    theme: 'dark';
     layout: 'modern' | 'compact' | 'enterprise';
     notifications: {
       email: boolean;
@@ -25,7 +25,7 @@ export const mockCurrentUser: User = {
   email: 'admin@lovablemarket.com',
   role: 'main-admin',
   preferences: {
-    theme: 'light',
+    theme: 'dark',
     layout: 'modern',
     notifications: {
       email: true,
@@ -42,7 +42,7 @@ export const mockPartnerUser: User = {
   role: 'partner-admin',
   partnerId: 'p1',
   preferences: {
-    theme: 'light',
+    theme: 'dark',
     layout: 'modern',
     notifications: {
       email: true,

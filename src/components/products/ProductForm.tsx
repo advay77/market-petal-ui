@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/lib/mock-data";
@@ -69,15 +68,8 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
     : 0;
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Package className="w-5 h-5" />
-          {product ? 'Edit Product' : 'Add New Product'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="w-full">
+      <form onSubmit={handleSubmit} className="space-y-6">
           {/* Product Image */}
           <div className="space-y-2">
             <Label>Product Image</Label>
@@ -243,7 +235,6 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

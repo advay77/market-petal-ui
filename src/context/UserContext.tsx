@@ -21,9 +21,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updatePreferences = (preferences: Partial<User['preferences']>) => {
+    // Force dark theme only, ignore theme preference changes
+    const filteredPreferences = { ...preferences };
+    delete filteredPreferences.theme;
+    
     setUser(prev => ({
       ...prev,
-      preferences: { ...prev.preferences, ...preferences }
+      preferences: { ...prev.preferences, ...filteredPreferences, theme: 'dark' }
     }));
   };
 

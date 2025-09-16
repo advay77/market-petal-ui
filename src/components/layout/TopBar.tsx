@@ -1,4 +1,4 @@
-import { Search, Bell, Settings, User, Moon, Sun, Menu } from "lucide-react";
+import { Search, Bell, Settings, User, Menu, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,15 +14,11 @@ import { Badge } from "@/components/ui/badge";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUser } from "@/context/UserContext";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 export function TopBar() {
   const { user, updatePreferences } = useUser();
 
-  const toggleTheme = () => {
-    const newTheme = user.preferences.theme === 'light' ? 'dark' : 'light';
-    updatePreferences({ theme: newTheme });
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
 
   const getInitials = (name: string) => {
     return name
@@ -51,17 +47,6 @@ export function TopBar() {
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
-          {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleTheme}
-            className="relative p-2 hover:bg-accent rounded-lg"
-          >
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
 
           {/* Notifications */}
           <DropdownMenu>
@@ -140,6 +125,22 @@ export function TopBar() {
               <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Demo Pages
+              </DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link to="/signin">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  <span>Sign In Page</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/signup">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  <span>Sign Up Page</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive">

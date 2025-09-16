@@ -23,18 +23,42 @@ import {
 import { mockProducts, Product } from "@/lib/mock-data";
 import { useUser } from "@/context/UserContext";
 import { cn } from "@/lib/utils";
+import { AddProductDialog } from "@/components/products/AddProductDialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Products() {
   const { user } = useUser();
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [products, setProducts] = useState<Product[]>(mockProducts);
 
   const isMainAdmin = user.role === 'main-admin';
 
+  const handleProductAdded = (newProduct: Partial<Product>) => {
+    const productWithDefaults = {
+      ...newProduct,
+      id: newProduct.id || `prod_${Date.now()}`,
+      partnerId: !isMainAdmin ? user.partnerId : undefined,
+      partnerName: !isMainAdmin ? user.name : undefined,
+      type: (newProduct as any).isMainProduct ? 'main-supplied' : 'partner-uploaded',
+      status: 'draft' as const,
+      createdAt: new Date().toISOString().split('T')[0],
+      updatedAt: new Date().toISOString().split('T')[0],
+    } as Product;
+
+    setProducts(prev => [productWithDefaults, ...prev]);
+    
+    toast({
+      title: "Product added successfully",
+      description: `${newProduct.name} has been added to your catalog.`,
+    });
+  };
+
   // Filter products based on user role and filters
-  const filteredProducts = mockProducts.filter(product => {
+  const filteredProducts = products.filter(product => {
     // Partner admin only sees their own products
     if (!isMainAdmin && product.partnerId !== user.partnerId) {
       return false;
@@ -152,10 +176,7 @@ export default function Products() {
             }
           </p>
         </div>
-        <Button className="bg-gradient-primary hover:bg-gradient-primary/90">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Product
-        </Button>
+        <AddProductDialog onProductAdded={handleProductAdded} />
       </div>
 
       {/* Filters and Search */}
@@ -308,10 +329,7 @@ export default function Products() {
                 ? 'Try adjusting your filters or search terms.'
                 : 'Get started by adding your first product.'}
             </p>
-            <Button className="bg-gradient-primary hover:bg-gradient-primary/90">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
+            <AddProductDialog onProductAdded={handleProductAdded} />
           </CardContent>
         </Card>
       )}
