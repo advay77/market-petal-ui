@@ -56,6 +56,7 @@ const partnerAdminItems = [
 const commonItems = [
   { title: "Settings", url: "/settings", icon: Settings },
   { title: "Notifications", url: "/notifications", icon: Bell },
+  { title: "Profile", url: "/profile", icon: UserCheck },
 ];
 
 export function AppSidebar() {
