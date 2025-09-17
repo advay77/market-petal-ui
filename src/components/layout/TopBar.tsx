@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
 export function TopBar() {
-  const { user, updatePreferences } = useUser();
+  const { user, switchUserRole, updatePreferences } = useUser();
 
 
   const getInitials = (name: string) => {
@@ -141,6 +141,16 @@ export function TopBar() {
                   <UserPlus className="mr-2 h-4 w-4" />
                   <span>Sign Up Page</span>
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => {
+                  const newRole = user.role === 'main-admin' ? 'partner-admin' : 'main-admin';
+                  switchUserRole(newRole);
+                }}
+                className="text-primary"
+              >
+                <span>Switch to {user.role === 'main-admin' ? 'Partner' : 'Admin'} View</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive">

@@ -9,12 +9,14 @@ import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import Partners from "./pages/Partners";
 import Orders from "./pages/Orders";
-import Settlements from "./pages/Settlements";
+import EnhancedSettlements from "./pages/EnhancedSettlements";
 import Templates from "./pages/Templates";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
+import Earnings from "./pages/Earnings";
+import Storefront from "./pages/Storefront";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
@@ -41,12 +43,14 @@ const App = () => (
                   <Route path="/products" element={<Products />} />
                   <Route path="/partners" element={<Partners />} />
                   <Route path="/orders" element={<Orders />} />
-                  <Route path="/settlements" element={<Settlements />} />
+                  <Route path="/settlements" element={<EnhancedSettlements />} />
                   <Route path="/templates" element={<Templates />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/earnings" element={<Earnings />} />
+                  <Route path="/storefront" element={<Storefront />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

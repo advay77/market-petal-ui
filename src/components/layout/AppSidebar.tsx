@@ -62,7 +62,7 @@ const commonItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
-  const { user } = useUser();
+  const { user, switchUserRole } = useUser();
   const currentPath = location.pathname;
   
   const collapsed = state === "collapsed";
@@ -165,8 +165,7 @@ export function AppSidebar() {
             <button
               onClick={() => {
                 const newRole = user.role === 'main-admin' ? 'partner-admin' : 'main-admin';
-                // This would come from UserContext
-                window.location.reload(); // Temporary for demo
+                switchUserRole(newRole);
               }}
               className="w-full px-3 py-2 text-sm bg-muted hover:bg-accent rounded-lg transition-colors"
             >

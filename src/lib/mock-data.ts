@@ -90,6 +90,17 @@ export interface Settlement {
   createdAt: string;
   processedAt?: string;
   details: SettlementDetail[];
+  // Enhanced settlement fields
+  totalSales?: number;
+  mainProductSales?: number;
+  partnerProductSales?: number;
+  mainProductMargin?: number;
+  partnerProductRevenue?: number;
+  grossEarnings?: number;
+  paymentGatewayFees?: number;
+  netSettlementAmount?: number;
+  isAutomated?: boolean;
+  emailSent?: boolean;
 }
 
 export interface SettlementDetail {
