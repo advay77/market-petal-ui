@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Building, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { signupApi } from "@/api/auth";
+import { useUser } from "@/context/UserContext";
 
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -21,6 +25,9 @@ export default function SignUp() {
     agreeToTerms: false,
     subscribeToUpdates: false,
   });
+  
+  const navigate = useNavigate();
+  const { setUser } = useUser();
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -29,14 +36,44 @@ export default function SignUp() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Add registration logic here
-    const partnerData = {
-      ...formData,
-      role: "partner" // Automatically set role as partner
-    };
-    console.log("Partner registration attempt:", partnerData);
+    setIsLoading(true);
+    
+    try {
+      // Validation
+      if (!formData.agreeToTerms) {
+        throw new Error("Please agree to terms and conditions");
+      }
+      
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+      
+      if (formData.password.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
+      
+      const [data, err] = await signupApi({
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        password: formData.password,
+        role: "partner-admin",
+        companyName: formData.companyName
+      });
+      
+      if (err) {
+        throw err;
+      }
+      
+      setUser(data);
+      toast.success("Account created successfully!");
+      navigate("/");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+    
+    setIsLoading(false);
   };
 
   const passwordStrength = {
@@ -266,9 +303,9 @@ export default function SignUp() {
               </div>
 
               {/* Sign Up Button */}
-              <Button type="submit" className="w-full" size="lg">
-                Register as Partner
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading ? "Creating Account..." : "Register as Partner"}
+                {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </form>
 

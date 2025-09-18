@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,15 +7,23 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { signinApi } from "@/api/auth";
+import { useUser } from "@/context/UserContext";
 
 export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     userType: "",
     rememberMe: false,
   });
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { setUser } = useUser();
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -24,10 +32,36 @@ export default function SignIn() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Add authentication logic here
-    console.log("Sign in attempt:", formData);
+    setIsLoading(true);
+    
+    try {
+      if (!formData.userType) {
+        throw new Error("Please select user type");
+      }
+      
+      const [data, err] = await signinApi({
+        email: formData.email,
+        password: formData.password,
+        userType: formData.userType as 'admin' | 'partner'
+      });
+      
+      if (err) {
+        throw err;
+      }
+      
+      setUser(data);
+      toast.success("Logged in Successfully");
+      
+      // Redirect to the page they were trying to access, or dashboard
+      const from = location.state?.from?.pathname || "/";
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -131,9 +165,9 @@ export default function SignIn() {
               </div>
 
               {/* Sign In Button */}
-              <Button type="submit" className="w-full" size="lg">
-                Sign In
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading ? "Signing In..." : "Sign In"}
+                {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </form>
 

@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/context/UserContext";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminOnlyRoute, PartnerOnlyRoute, AdminAndPartnerRoute } from "@/components/auth/RoleBasedRoute";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import Partners from "./pages/Partners";
@@ -19,6 +21,7 @@ import Earnings from "./pages/Earnings";
 import Storefront from "./pages/Storefront";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,31 +34,42 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Auth routes - without AppLayout */}
+            {/* Public routes - No authentication required */}
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
             
-            {/* Main app routes - with AppLayout */}
-            <Route path="/*" element={
-              <AppLayout>
-                <Routes>
+            {/* Protected routes - Authentication required */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppLayout />}>
+                {/* Routes accessible to both Admin and Partner */}
+                <Route element={<AdminAndPartnerRoute />}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/products" element={<Products />} />
-                  <Route path="/partners" element={<Partners />} />
                   <Route path="/orders" element={<Orders />} />
                   <Route path="/settlements" element={<EnhancedSettlements />} />
-                  <Route path="/templates" element={<Templates />} />
                   <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/earnings" element={<Earnings />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/profile" element={<Profile />} />
-                  <Route path="/earnings" element={<Earnings />} />
+                </Route>
+                
+                {/* Admin-only routes */}
+                <Route element={<AdminOnlyRoute />}>
+                  <Route path="/partners" element={<Partners />} />
+                  <Route path="/templates" element={<Templates />} />
+                </Route>
+                
+                {/* Partner-only routes */}
+                <Route element={<PartnerOnlyRoute />}>
                   <Route path="/storefront" element={<Storefront />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AppLayout>
-            } />
+                </Route>
+                
+                {/* Catch-all for 404 */}
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Route>
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

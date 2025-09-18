@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, mockCurrentUser, mockPartnerUser } from '@/types/user';
 
 interface UserContextType {
   user: User;
-  switchUserRole: (role: 'main-admin' | 'partner-admin') => void;
+  setUser: (user: User) => void;
+  logout: () => void;
   updatePreferences: (preferences: Partial<User['preferences']>) => void;
 }
 
@@ -12,12 +13,33 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User>(mockCurrentUser);
 
-  const switchUserRole = (role: 'main-admin' | 'partner-admin') => {
-    if (role === 'main-admin') {
-      setUser(mockCurrentUser);
-    } else {
-      setUser(mockPartnerUser);
+  // Persist user data to localStorage when it changes
+  useEffect(() => {
+    if (user && user.id !== 'user1') { // Don't persist mock data
+      localStorage.setItem('user-data', JSON.stringify(user));
     }
+  }, [user]);
+
+  // Load persisted user data on mount
+  useEffect(() => {
+    const savedUserData = localStorage.getItem('user-data');
+    if (savedUserData) {
+      try {
+        const parsedUser = JSON.parse(savedUserData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Failed to parse saved user data:', error);
+        localStorage.removeItem('user-data');
+      }
+    }
+  }, []);
+
+
+  const logout = () => {
+    // Reset to mock user and clear persisted data
+    setUser(mockCurrentUser);
+    localStorage.removeItem("jwt-token");
+    localStorage.removeItem("user-data");
   };
 
   const updatePreferences = (preferences: Partial<User['preferences']>) => {
@@ -32,7 +54,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ user, switchUserRole, updatePreferences }}>
+    <UserContext.Provider value={{ user, setUser, logout, updatePreferences }}>
       {children}
     </UserContext.Provider>
   );

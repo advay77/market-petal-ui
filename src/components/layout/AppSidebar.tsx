@@ -1,22 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Package,
-  Users,
-  ShoppingCart,
-  CreditCard,
-  FileText,
-  BarChart3,
-  Settings,
-  Bell,
-  ChevronDown,
-  ChevronRight,
-  Store,
-  TrendingUp,
-  Wallet,
-  UserCheck,
-} from "lucide-react";
+import { Store } from "lucide-react";
 
 import {
   Sidebar,
@@ -31,38 +15,15 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useUser } from "@/context/UserContext";
+import { useRoleBasedNavigation } from "@/hooks/useRoleBasedNavigation";
 import { cn } from "@/lib/utils";
 
-// Navigation items for different user roles
-const mainAdminItems = [
-  { title: "Overview", url: "/", icon: LayoutDashboard },
-  { title: "Products", url: "/products", icon: Package },
-  { title: "Partners", url: "/partners", icon: Users },
-  { title: "Orders", url: "/orders", icon: ShoppingCart },
-  { title: "Settlements", url: "/settlements", icon: CreditCard },
-  { title: "Templates", url: "/templates", icon: FileText },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
-];
-
-const partnerAdminItems = [
-  { title: "Overview", url: "/", icon: LayoutDashboard },
-  { title: "My Products", url: "/products", icon: Package },
-  { title: "Orders", url: "/orders", icon: ShoppingCart },
-  { title: "Earnings", url: "/earnings", icon: TrendingUp },
-  { title: "Settlements", url: "/settlements", icon: Wallet },
-  { title: "Storefront", url: "/storefront", icon: Store },
-];
-
-const commonItems = [
-  { title: "Settings", url: "/settings", icon: Settings },
-  { title: "Notifications", url: "/notifications", icon: Bell },
-  { title: "Profile", url: "/profile", icon: UserCheck },
-];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
-  const { user, switchUserRole } = useUser();
+  const { user } = useUser();
+  const { mainItems, secondaryItems } = useRoleBasedNavigation();
   const currentPath = location.pathname;
   
   const collapsed = state === "collapsed";
@@ -83,8 +44,6 @@ export function AppSidebar() {
         "hover:bg-gradient-primary hover:text-primary-foreground",
       ]
     );
-
-  const navigationItems = user.role === 'main-admin' ? mainAdminItems : partnerAdminItems;
 
   return (
     <Sidebar
@@ -119,7 +78,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
+              {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={getNavClasses(item.url)}>
@@ -142,7 +101,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {commonItems.map((item) => (
+              {secondaryItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={getNavClasses(item.url)}>
@@ -158,21 +117,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* User Role Switcher (for demo purposes) */}
-        {!collapsed && (
-          <div className="mt-auto p-4 border-t border-sidebar-border">
-            <div className="text-xs text-muted-foreground mb-2">Demo Mode</div>
-            <button
-              onClick={() => {
-                const newRole = user.role === 'main-admin' ? 'partner-admin' : 'main-admin';
-                switchUserRole(newRole);
-              }}
-              className="w-full px-3 py-2 text-sm bg-muted hover:bg-accent rounded-lg transition-colors"
-            >
-              Switch to {user.role === 'main-admin' ? 'Partner' : 'Main'} Admin
-            </button>
-          </div>
-        )}
       </SidebarContent>
     </Sidebar>
   );

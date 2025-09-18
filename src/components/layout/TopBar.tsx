@@ -1,4 +1,4 @@
-import { Search, Bell, Settings, User, Menu, LogIn, UserPlus } from "lucide-react";
+import { Search, Bell, Settings, User, Menu, LogIn, UserPlus, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,10 +14,15 @@ import { Badge } from "@/components/ui/badge";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUser } from "@/context/UserContext";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { signoutApi } from "@/api/auth";
+import { useState } from "react";
 
 export function TopBar() {
-  const { user, switchUserRole, updatePreferences } = useUser();
+  const { user, logout } = useUser();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const navigate = useNavigate();
 
 
   const getInitials = (name: string) => {
@@ -26,6 +31,23 @@ export function TopBar() {
       .map(part => part[0])
       .join('')
       .toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const [data, err] = await signoutApi();
+      if (err) {
+        throw err;
+      }
+      
+      logout(); // Clear user context
+      toast.success("Logged out successfully");
+      navigate("/signin");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to logout");
+    }
+    setIsLoggingOut(false);
   };
 
   return (
@@ -118,43 +140,26 @@ export function TopBar() {
                 </Badge>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                Demo Pages
-              </DropdownMenuLabel>
               <DropdownMenuItem asChild>
-                <Link to="/signin">
-                  <LogIn className="mr-2 h-4 w-4" />
-                  <span>Sign In Page</span>
+                <Link to="/profile">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/signup">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  <span>Sign Up Page</span>
+                <Link to="/settings">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                onClick={() => {
-                  const newRole = user.role === 'main-admin' ? 'partner-admin' : 'main-admin';
-                  switchUserRole(newRole);
-                }}
-                className="text-primary"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="text-destructive"
               >
-                <span>Switch to {user.role === 'main-admin' ? 'Partner' : 'Admin'} View</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
-                <span>Log out</span>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>{isLoggingOut ? "Logging out..." : "Log out"}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
