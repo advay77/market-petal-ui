@@ -23,13 +23,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // Load persisted user data on mount
   useEffect(() => {
     const savedUserData = localStorage.getItem('user-data');
-    if (savedUserData) {
+    const savedToken = localStorage.getItem('jwt-token');
+    if (savedUserData && savedToken) {
       try {
         const parsedUser = JSON.parse(savedUserData);
-        setUser(parsedUser);
+        setUser({...parsedUser,token:savedToken});
       } catch (error) {
         console.error('Failed to parse saved user data:', error);
         localStorage.removeItem('user-data');
+        localStorage.removeItem('jwt-token');
       }
     }
   }, []);

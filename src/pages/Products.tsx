@@ -1,96 +1,62 @@
-import { useState } from "react";
-import { Package, Plus, Search, Filter, Grid, List, Edit, Trash2, Eye } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { mockProducts, Product } from "@/lib/mock-data";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useUser } from "@/context/UserContext";
-import { cn } from "@/lib/utils";
-import { AddProductDialog } from "@/components/products/AddProductDialog";
-import { useToast } from "@/hooks/use-toast";
+import { ProductManagement } from "@/components/products/ProductManagement";
+import { PartnerStoreManagement } from "@/components/products/PartnerStoreManagement";
+import { useProductStats } from "@/hooks/useProducts";
+import { usePartnerStoreStats } from "@/hooks/usePartnerStore";
+import { useProductEvents } from "@/hooks/useWebSocket"; // Import the WebSocket hook
+import { Package, TrendingUp, ShoppingCart, AlertCircle, Store, Plus, Wifi, WifiOff, Bell } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Products() {
   const { user } = useUser();
-  const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-
   const isMainAdmin = user.role === 'main-admin';
+  
+  // Get appropriate stats based on user role
+  const { stats: adminStats, loading: adminStatsLoading } = useProductStats();
+  const { stats: partnerStats, loading: partnerStatsLoading } = usePartnerStoreStats();
 
-  const handleProductAdded = (newProduct: Partial<Product>) => {
-    const productWithDefaults = {
-      ...newProduct,
-      id: newProduct.id || `prod_${Date.now()}`,
-      partnerId: !isMainAdmin ? user.partnerId : undefined,
-      partnerName: !isMainAdmin ? user.name : undefined,
-      type: (newProduct as any).isMainProduct ? 'main-supplied' : 'partner-uploaded',
-      status: 'draft' as const,
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
-    } as Product;
+  // WebSocket integration for real-time updates
+  const token = localStorage.getItem('jwt-token');
+  const {
+    products: realtimeProducts,
+    notifications,
+    isConnected,
+    connectionError,
+    clearNotifications,
+    setProducts // To manually sync with existing products
+  } = useProductEvents(token || undefined);
 
-    setProducts(prev => [productWithDefaults, ...prev]);
-    
-    toast({
-      title: "Product added successfully",
-      description: `${newProduct.name} has been added to your catalog.`,
-    });
-  };
+  const [showNotifications, setShowNotifications] = useState(false);
 
-  // Filter products based on user role and filters
-  const filteredProducts = products.filter(product => {
-    // Partner admin only sees their own products
-    if (!isMainAdmin && product.partnerId !== user.partnerId) {
-      return false;
+  // Handle real-time product updates with toast notifications
+  useEffect(() => {
+    if (realtimeProducts.length > 0) {
+      const latestProduct = realtimeProducts[0];
+      toast.success(`New product added: ${latestProduct.name}`, {
+        description: `${latestProduct.type} product in ${latestProduct.category}`,
+        duration: 5000,
+      });
     }
+  }, [realtimeProducts]);
 
-    // Apply search filter
-    if (searchTerm && !product.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
+  // Handle system notifications
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latestNotification = notifications[0];
+      const toastVariant = latestNotification.priority === 'high' ? 'destructive' : 'default';
+      
+      toast(latestNotification.title, {
+        description: latestNotification.message,
+        duration: latestNotification.priority === 'high' ? 8000 : 5000,
+      });
     }
-
-    // Apply status filter
-    if (statusFilter !== 'all' && product.status !== statusFilter) {
-      return false;
-    }
-
-    // Apply category filter
-    if (categoryFilter !== 'all' && product.category !== categoryFilter) {
-      return false;
-    }
-
-    return true;
-  });
-
-  const getStatusBadge = (status: Product['status']) => {
-    const variants = {
-      active: 'default',
-      draft: 'secondary',
-      archived: 'outline',
-    } as const;
-
-    return <Badge variant={variants[status]}>{status}</Badge>;
-  };
+  }, [notifications]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -99,239 +65,255 @@ export default function Products() {
     }).format(amount);
   };
 
-  const ProductCard = ({ product }: { product: Product }) => (
-    <Card className="group hover:shadow-lg transition-all duration-200 overflow-hidden">
-      <div className="aspect-square bg-gradient-subtle relative overflow-hidden">
-        <img
-          src={product.imageUrl}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-        />
-        <div className="absolute top-2 right-2">
-          {getStatusBadge(product.status)}
-        </div>
-        <div className="absolute top-2 left-2">
-          <Badge variant={product.type === 'main-supplied' ? 'default' : 'secondary'}>
-            {product.type === 'main-supplied' ? 'Main' : 'Partner'}
-          </Badge>
-        </div>
-      </div>
-      <CardContent className="p-4">
-        <div className="space-y-2">
-          <h3 className="font-semibold line-clamp-1">{product.name}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {product.description}
-          </p>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="font-bold text-lg">{formatCurrency(product.price)}</div>
-              {isMainAdmin && (
-                <div className="text-xs text-muted-foreground">
-                  Cost: {formatCurrency(product.wholesaleCost)} • Margin: {product.margin}%
-                </div>
-              )}
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-muted-foreground">Stock</div>
-              <div className="font-medium">{product.stock}</div>
-            </div>
+  const ConnectionStatus = () => (
+    <Card className="mb-6">
+      <CardContent className="pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isConnected ? (
+              <>
+                <Wifi className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-green-700">Real-time updates connected</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-4 w-4 text-red-500" />
+                <span className="text-sm text-red-700">
+                  {connectionError || 'Disconnected from real-time updates'}
+                </span>
+              </>
+            )}
           </div>
-          {product.partnerName && isMainAdmin && (
-            <div className="flex items-center gap-2 pt-2 border-t">
-              <Avatar className="w-5 h-5">
-                <AvatarFallback className="text-xs">
-                  {product.partnerName.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs text-muted-foreground">{product.partnerName}</span>
+          
+          {notifications.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNotifications(!showNotifications)}
+              >
+                <Bell className="h-4 w-4 mr-2" />
+                {notifications.length} notifications
+              </Button>
+              
+              {showNotifications && (
+                <Button variant="ghost" size="sm" onClick={clearNotifications}>
+                  Clear All
+                </Button>
+              )}
             </div>
           )}
         </div>
-        <div className="flex gap-1 mt-3">
-          <Button size="sm" variant="outline" className="flex-1">
-            <Eye className="w-3 h-3 mr-1" />
-            View
-          </Button>
-          <Button size="sm" variant="outline" className="flex-1">
-            <Edit className="w-3 h-3 mr-1" />
-            Edit
-          </Button>
-        </div>
+
+        {/* Notifications Panel */}
+        {showNotifications && notifications.length > 0 && (
+          <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
+            {notifications.map((notification) => (
+              <Alert key={notification.id} className="py-2">
+                <AlertDescription>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-medium">{notification.title}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {notification.message}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={
+                        notification.priority === 'high' ? 'destructive' : 
+                        notification.priority === 'medium' ? 'default' : 
+                        'secondary'
+                      }>
+                        {notification.priority}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(notification.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 
+  const renderStatsCards = () => {
+    if (isMainAdmin) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {adminStatsLoading ? '...' : adminStats?.overview.totalProducts || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {adminStatsLoading ? '' : `${adminStats?.overview.mainSupplied || 0} main, ${adminStats?.overview.partnerUploaded || 0} partner`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Products</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {adminStatsLoading ? '...' : adminStats?.overview.activeProducts || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {adminStatsLoading ? '' : `${adminStats?.overview.draftProducts || 0} in draft`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {adminStatsLoading ? '...' : formatCurrency(adminStats?.overview.totalValue || 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {adminStatsLoading ? '' : `Avg: ${formatCurrency(adminStats?.overview.averagePrice || 0)}`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Stock</CardTitle>
+              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {adminStatsLoading ? '...' : adminStats?.overview.totalStock || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Units in inventory
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    } else {
+      // Partner stats
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Store Products</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {partnerStatsLoading ? '...' : partnerStats?.totalProducts || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {partnerStatsLoading ? '' : `${partnerStats?.catalogProducts || 0} catalog, ${partnerStats?.ownProducts || 0} own`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Own Products</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {partnerStatsLoading ? '...' : partnerStats?.activeOwnProducts || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {partnerStatsLoading ? '' : `${partnerStats?.draftOwnProducts || 0} in draft`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Store Value</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {partnerStatsLoading ? '...' : formatCurrency(partnerStats?.totalValue || 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {partnerStatsLoading ? '' : `Avg: ${formatCurrency(partnerStats?.averagePrice || 0)}`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Stock</CardTitle>
+              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {partnerStatsLoading ? '...' : partnerStats?.totalStock || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Units available
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            {isMainAdmin ? 'Products' : 'My Products'}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {isMainAdmin 
-              ? 'Manage all marketplace products and inventory'
-              : 'Manage your product catalog and inventory'
-            }
-          </p>
-        </div>
-        <AddProductDialog onProductAdded={handleProductAdded} />
-      </div>
+      {/* Real-time Connection Status */}
+      <ConnectionStatus />
 
-      {/* Filters and Search */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="Electronics">Electronics</SelectItem>
-                  <SelectItem value="Fashion">Fashion</SelectItem>
-                  <SelectItem value="Home & Garden">Home & Garden</SelectItem>
-                  <SelectItem value="Sports">Sports</SelectItem>
-                  <SelectItem value="Beauty">Beauty</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex border rounded-lg">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-r-none"
-                >
-                  <Grid className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-l-none"
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Statistics Cards */}
+      {renderStatsCards()}
 
-      {/* Products Grid/List */}
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+      {/* Product Management - Different views for Admin vs Partner */}
+      {isMainAdmin ? (
+        <ProductManagement 
+          viewMode="table"
+          showFilters={true}
+          showActions={true}
+        />
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Stock</TableHead>
-                {isMainAdmin && <TableHead>Partner</TableHead>}
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-10 h-10 rounded-md object-cover"
-                      />
-                      <div>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          SKU: {product.sku}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{product.category}</TableCell>
-                  <TableCell>{getStatusBadge(product.status)}</TableCell>
-                  <TableCell>{formatCurrency(product.price)}</TableCell>
-                  <TableCell>{product.stock}</TableCell>
-                  {isMainAdmin && (
-                    <TableCell>
-                      {product.partnerName && (
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-6 h-6">
-                            <AvatarFallback className="text-xs">
-                              {product.partnerName.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">{product.partnerName}</span>
-                        </div>
-                      )}
-                    </TableCell>
-                  )}
-                  <TableCell className="text-right">
-                    <div className="flex gap-1 justify-end">
-                      <Button size="sm" variant="ghost">
-                        <Eye className="w-3 h-3" />
-                      </Button>
-                      <Button size="sm" variant="ghost">
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive">
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-
-      {filteredProducts.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No products found</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all'
-                ? 'Try adjusting your filters or search terms.'
-                : 'Get started by adding your first product.'}
-            </p>
-            <AddProductDialog onProductAdded={handleProductAdded} />
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="my-products" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="my-products" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              My Products
+            </TabsTrigger>
+            <TabsTrigger value="store-catalog" className="flex items-center gap-2">
+              <Store className="h-4 w-4" />
+              Store Catalog
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="my-products" className="space-y-6">
+            <ProductManagement 
+              viewMode="table"
+              showFilters={true}
+              showActions={true}
+              initialFilters={{ type: 'partner-uploaded' }}
+            />
+          </TabsContent>
+          
+          <TabsContent value="store-catalog" className="space-y-6">
+            <PartnerStoreManagement />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

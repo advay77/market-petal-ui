@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  token?:string
   partnerId?: string; // Only for partner-admin users
   avatar?: string;
   preferences: {

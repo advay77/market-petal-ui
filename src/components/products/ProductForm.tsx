@@ -13,28 +13,34 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Product } from "@/lib/mock-data";
+import { Product, CreateProductForm } from "@/types/product";
+import { useUser } from "@/context/UserContext";
 
 interface ProductFormProps {
   product?: Product;
-  onSave: (product: Partial<Product>) => void;
+  onSave: (product: CreateProductForm) => void;
   onCancel: () => void;
+  loading?: boolean;
 }
 
-export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
+export function ProductForm({ product, onSave, onCancel, loading: externalLoading }: ProductFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const {user} = useUser();
+  
+  const isLoading = externalLoading || loading;
   
   const [formData, setFormData] = useState({
     name: product?.name || "",
     description: product?.description || "",
-    brand: "",
+    brand: product?.brand || "",
     price: product?.price || 0,
     wholesaleCost: product?.wholesaleCost || 0,
     category: product?.category || "",
     stock: product?.stock || 0,
     sku: product?.sku || "",
     imageUrl: product?.imageUrl || "",
+    status: product?.status || "draft",
     isMainProduct: product?.type === 'main-supplied' || false,
   });
 
@@ -42,19 +48,23 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
     e.preventDefault();
     setLoading(true);
     
-    // Calculate margin
-    const margin = ((formData.price - formData.wholesaleCost) / formData.price) * 100;
+    // Create the form data in the correct format
+    const productData: CreateProductForm = {
+      name: formData.name,
+      description: formData.description,
+      brand: formData.brand,
+      type: user.role === 'main-admin' ? 'main-supplied' : 'partner-uploaded',
+      price: formData.price,
+      wholesaleCost: formData.wholesaleCost,
+      category: formData.category,
+      stock: formData.stock,
+      sku: formData.sku,
+      margin: margin,
+      imageUrl: formData.imageUrl,
+      status: formData.status as 'active' | 'draft' | 'archived'
+    };
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    onSave({
-      ...product,
-      ...formData,
-      margin: Math.round(margin),
-      type: formData.isMainProduct ? 'main-supplied' : 'partner-uploaded',
-      updatedAt: new Date().toISOString().split('T')[0],
-    });
+    onSave(productData);
     
     setLoading(false);
     toast({
@@ -131,8 +141,8 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
             />
           </div>
 
-          {/* Category and SKU */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Category, SKU, and Status */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
               <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
@@ -157,6 +167,35 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
                 onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
                 placeholder="Product SKU"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status *</Label>
+              <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as 'active' | 'draft' | 'archived' }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">Draft</Badge>
+                      <span className="text-sm text-muted-foreground">- Not visible to customers</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="active">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="default">Active</Badge>
+                      <span className="text-sm text-muted-foreground">- Live and available</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="archived">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">Archived</Badge>
+                      <span className="text-sm text-muted-foreground">- Hidden from catalog</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -222,11 +261,11 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
           <div className="flex gap-4 pt-4">
             <Button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="bg-gradient-primary hover:bg-gradient-primary/90"
             >
               <Save className="w-4 h-4 mr-2" />
-              {loading ? "Saving..." : product ? "Update Product" : "Create Product"}
+              {isLoading ? "Saving..." : product ? "Update Product" : "Create Product"}
             </Button>
             
             <Button type="button" variant="outline" onClick={onCancel}>

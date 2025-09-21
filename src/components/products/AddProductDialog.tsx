@@ -10,56 +10,74 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ProductForm } from "./ProductForm";
-import { Product } from "@/lib/mock-data";
+import { Product, CreateProductForm } from "@/types/product";
+import { CreateProductPayload } from "@/api/products";
 
 interface AddProductDialogProps {
-  onProductAdded?: (product: Partial<Product>) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSave?: (product: CreateProductPayload) => Promise<void>;
+  onCancel?: () => void;
+  product?: Product; // For editing
   trigger?: React.ReactNode;
 }
 
-export function AddProductDialog({ onProductAdded, trigger }: AddProductDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddProductDialog({ 
+  open, 
+  onOpenChange, 
+  onSave, 
+  onCancel, 
+  product,
+  trigger 
+}: AddProductDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = (product: Partial<Product>) => {
-    // Generate a new ID for the product
-    const newProduct = {
-      ...product,
-      id: `prod_${Date.now()}`,
-      status: 'draft' as const,
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
-    };
+  const isControlled = open !== undefined;
+  const dialogOpen = isControlled ? open : internalOpen;
+  const setDialogOpen = isControlled ? onOpenChange : setInternalOpen;
 
-    // Call the parent callback
-    onProductAdded?.(newProduct);
+  const handleSave = async (productData: CreateProductForm) => {
+    if (!onSave) return;
     
-    // Close the dialog
-    setOpen(false);
+    setLoading(true);
+    try {
+      await onSave(productData);
+      setDialogOpen?.(false);
+    } catch (error) {
+      // Error handled in parent component
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
-    setOpen(false);
+    onCancel?.();
+    setDialogOpen?.(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button className="bg-gradient-primary hover:bg-gradient-primary/90">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Product
-          </Button>
-        )}
-      </DialogTrigger>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background text-foreground border-border">
         <DialogHeader>
-          <DialogTitle>Add New Product</DialogTitle>
+          <DialogTitle>
+            {product ? 'Edit Product' : 'Add New Product'}
+          </DialogTitle>
           <DialogDescription>
-            Create a new product for your marketplace. Fill in all the required information below.
+            {product 
+              ? 'Update the product information below.'
+              : 'Create a new product for your marketplace. Fill in all the required information below.'
+            }
           </DialogDescription>
         </DialogHeader>
         <div className="mt-4">
-          <ProductForm onSave={handleSave} onCancel={handleCancel} />
+          <ProductForm 
+            onSave={handleSave} 
+            onCancel={handleCancel}
+            product={product}
+            loading={loading}
+          />
         </div>
       </DialogContent>
     </Dialog>
